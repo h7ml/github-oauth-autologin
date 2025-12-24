@@ -172,7 +172,6 @@ jobs:
       - name: 验证文档文件
         run: |
           test -f README.md
-          test -f README_OPTIMIZATION.md
           test -f docs/index.html
           test -f CLAUDE.md
           test -f CHANGELOG.md
