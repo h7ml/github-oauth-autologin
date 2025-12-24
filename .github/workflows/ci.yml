@@ -141,6 +141,12 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
+
+      - name: 安装 Playwright 浏览器
+        run: |
+          # Ubuntu 24.04 兼容性修复：libasound2 已更名为 libasound2t64
+          sudo apt-get update
+          sudo apt-get install -y libasound2t64 || sudo apt-get install -y libasound2
           playwright install chromium --with-deps
 
       - name: 验证配置文件
@@ -234,6 +240,12 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
+
+      - name: 安装 Playwright 浏览器
+        run: |
+          # Ubuntu 24.04 兼容性修复：libasound2 已更名为 libasound2t64
+          sudo apt-get update
+          sudo apt-get install -y libasound2t64 || sudo apt-get install -y libasound2
           playwright install chromium --with-deps
 
       - name: 模拟运行（验证导入）
