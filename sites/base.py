@@ -12,10 +12,7 @@ class SiteAdapter(ABC):
     """站点适配器基类"""
 
     def __init__(
-        self,
-        config: SiteConfig,
-        credentials: GitHubCredentials,
-        notifier: NotifierInterface
+        self, config: SiteConfig, credentials: GitHubCredentials, notifier: NotifierInterface
     ):
         self.config = config
         self.credentials = credentials
@@ -39,7 +36,9 @@ class SiteAdapter(ABC):
             # 2. 访问登录页
             print(f"🔹 步骤1: 访问 {self.config.name}")
             page.goto(self.config.login_url, timeout=60000)
-            page.wait_for_load_state('networkidle', timeout=self.config.timeouts.network_idle * 1000)
+            page.wait_for_load_state(
+                "networkidle", timeout=self.config.timeouts.network_idle * 1000
+            )
             time.sleep(2)
 
             # 检查是否已登录
@@ -52,39 +51,34 @@ class SiteAdapter(ABC):
             # 3. 点击 OAuth 按钮
             print("🔹 步骤2: 点击 GitHub 登录")
             if not self.oauth_handler.click_oauth_button(
-                page,
-                self.config.oauth_button_selectors,
-                "GitHub"
+                page, self.config.oauth_button_selectors, "GitHub"
             ):
                 print("❌ 未找到 OAuth 按钮")
                 return False
 
             time.sleep(3)
-            page.wait_for_load_state('networkidle', timeout=self.config.timeouts.network_idle * 1000)
+            page.wait_for_load_state(
+                "networkidle", timeout=self.config.timeouts.network_idle * 1000
+            )
 
             # 4. GitHub 认证
             print("🔹 步骤3: GitHub 认证")
             url = page.url
 
-            if 'github.com/login' in url or 'github.com/session' in url:
+            if "github.com/login" in url or "github.com/session" in url:
                 if not self.github_auth.login(
-                    page,
-                    self.credentials,
-                    self.config.two_factor,
-                    self.config.device_verification
+                    page, self.credentials, self.config.two_factor, self.config.device_verification
                 ):
                     print("❌ GitHub 登录失败")
                     return False
-            elif 'github.com/login/oauth/authorize' in url:
+            elif "github.com/login/oauth/authorize" in url:
                 print("✅ Cookie 有效")
                 self.oauth_handler.handle_authorization(page)
 
             # 5. 等待回调
             print("🔹 步骤4: 等待回调")
             if not self.oauth_handler.wait_callback(
-                page,
-                self.config.success_url_patterns,
-                self.config.timeouts.oauth_callback
+                page, self.config.success_url_patterns, self.config.timeouts.oauth_callback
             ):
                 print("❌ 回调失败")
                 return False
@@ -110,26 +104,24 @@ class SiteAdapter(ABC):
         except Exception as e:
             print(f"❌ 异常: {e}")
             import traceback
+
             traceback.print_exc()
             return False
 
     def _load_session_cookie(self, context):
         """加载 Session Cookie"""
         try:
-            context.add_cookies([
-                {
-                    'name': 'user_session',
-                    'value': self.credentials.session_cookie,
-                    'domain': 'github.com',
-                    'path': '/'
-                },
-                {
-                    'name': 'logged_in',
-                    'value': 'yes',
-                    'domain': 'github.com',
-                    'path': '/'
-                }
-            ])
+            context.add_cookies(
+                [
+                    {
+                        "name": "user_session",
+                        "value": self.credentials.session_cookie,
+                        "domain": "github.com",
+                        "path": "/",
+                    },
+                    {"name": "logged_in", "value": "yes", "domain": "github.com", "path": "/"},
+                ]
+            )
             print("✅ 已加载 Session Cookie")
         except Exception:
             print("⚠️ 加载 Cookie 失败")
@@ -137,7 +129,7 @@ class SiteAdapter(ABC):
     def _check_already_logged_in(self, page) -> bool:
         """检查是否已登录"""
         for pattern in self.config.success_url_patterns:
-            if pattern.startswith('!'):
+            if pattern.startswith("!"):
                 # 反向匹配
                 if pattern[1:] in page.url:
                     return False
@@ -156,13 +148,13 @@ class SiteAdapter(ABC):
         for keepalive in self.config.keepalive_urls:
             try:
                 full_url = keepalive.url
-                if not full_url.startswith('http'):
+                if not full_url.startswith("http"):
                     # 相对 URL，需要拼接基础 URL
-                    base_url = self.config.login_url.rsplit('/', 1)[0]
+                    base_url = self.config.login_url.rsplit("/", 1)[0]
                     full_url = f"{base_url}{keepalive.url}"
 
                 page.goto(full_url, timeout=30000)
-                page.wait_for_load_state('networkidle', timeout=15000)
+                page.wait_for_load_state("networkidle", timeout=15000)
                 print(f"✅ 已访问: {keepalive.name}")
                 time.sleep(2)
             except Exception:
@@ -174,9 +166,7 @@ class SiteAdapter(ABC):
 
         for cookie_name in self.config.cookie_names:
             value = self.cookie_manager.extract_session(
-                context,
-                self.config.cookie_domain,
-                cookie_name
+                context, self.config.cookie_domain, cookie_name
             )
 
             if value:

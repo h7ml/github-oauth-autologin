@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 @dataclass
 class GitHubCredentials:
     """GitHub 凭据"""
+
     username: str
     password: str
     session_cookie: Optional[str] = None
@@ -15,6 +16,7 @@ class GitHubCredentials:
 @dataclass
 class TwoFactorConfig:
     """双因素认证配置"""
+
     strategy: Literal["auto", "mobile", "totp"] = "auto"
     mobile_wait: int = 120
     totp_wait: int = 120
@@ -23,12 +25,14 @@ class TwoFactorConfig:
 @dataclass
 class DeviceVerificationConfig:
     """设备验证配置"""
+
     wait: int = 30
 
 
 @dataclass
 class TimeoutConfig:
     """超时配置"""
+
     page_load: int = 30
     oauth_callback: int = 60
     network_idle: int = 15
@@ -37,6 +41,7 @@ class TimeoutConfig:
 @dataclass
 class CookieTarget:
     """Cookie 存储目标"""
+
     type: Literal["github_secret", "file", "env"]
     secret_name: Optional[str] = None
     path: Optional[str] = None
@@ -46,6 +51,7 @@ class CookieTarget:
 @dataclass
 class KeepAliveURL:
     """保活 URL"""
+
     url: str
     name: str
 
@@ -53,6 +59,7 @@ class KeepAliveURL:
 @dataclass
 class SiteConfig:
     """站点配置"""
+
     name: str
     enabled: bool
     login_url: str
@@ -71,7 +78,9 @@ class NotifierInterface(ABC):
     """通知器接口"""
 
     @abstractmethod
-    def notify(self, message: str, level: str = "INFO", attachments: list[str] = None):
+    def notify(
+        self, message: str, level: str = "INFO", attachments: Optional[list[str]] = None
+    ):
         """发送通知"""
         pass
 

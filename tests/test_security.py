@@ -50,4 +50,3 @@ class TestSanitizeLogMessage:
         message = "Login successful"
         result = sanitize_log_message(message)
         assert result == message
-

@@ -10,18 +10,14 @@ def mock_credentials():
     return GitHubCredentials(
         username="test_user",
         password="test_password_123",
-        session_cookie="test_session_cookie_abc123"
+        session_cookie="test_session_cookie_abc123",
     )
 
 
 @pytest.fixture
 def mock_two_factor_config():
     """模拟 2FA 配置"""
-    return TwoFactorConfig(
-        strategy="auto",
-        mobile_wait=120,
-        totp_wait=120
-    )
+    return TwoFactorConfig(strategy="auto", mobile_wait=120, totp_wait=120)
 
 
 @pytest.fixture
@@ -59,4 +55,3 @@ def mock_browser_context():
     context.cookies = Mock(return_value=[])
     context.add_cookies = Mock()
     return context
-
