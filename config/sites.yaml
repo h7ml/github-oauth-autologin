@@ -1,0 +1,72 @@
+# 站点配置文件
+
+clawcloud:
+  name: "ClawCloud"
+  enabled: true
+
+  login_url: "https://eu-central-1.run.claw.cloud/signin"
+
+  success_url_patterns:
+    - "claw.cloud"
+    - "!signin"
+
+  oauth_button_selectors:
+    - 'button:has-text("GitHub")'
+    - 'a:has-text("GitHub")'
+    - '[data-provider="github"]'
+
+  two_factor:
+    strategy: "auto"
+    mobile_wait: 120
+    totp_wait: 120
+
+  device_verification:
+    wait: 30
+
+  timeouts:
+    page_load: 30
+    oauth_callback: 60
+    network_idle: 15
+
+  keepalive_urls:
+    - url: "/"
+      name: "控制台"
+    - url: "/apps"
+      name: "应用列表"
+
+  cookie_domain: "github.com"
+  cookie_names:
+    - "user_session"
+
+  cookie_targets:
+    - type: "github_secret"
+      secret_name: "GH_SESSION"
+    - type: "file"
+      path: "./cookies/clawcloud.json"
+      encrypt: false
+
+# 更多站点示例
+# vercel:
+#   name: "Vercel"
+#   enabled: false
+#   login_url: "https://vercel.com/login"
+#   oauth_button_selectors:
+#     - 'button[data-testid="login-with-github"]'
+#   success_url_patterns:
+#     - "vercel.com/dashboard"
+#   two_factor:
+#     strategy: "auto"
+#     mobile_wait: 120
+#     totp_wait: 120
+#   device_verification:
+#     wait: 30
+#   timeouts:
+#     page_load: 30
+#     oauth_callback: 60
+#     network_idle: 15
+#   cookie_domain: "github.com"
+#   cookie_names:
+#     - "user_session"
+#   cookie_targets:
+#     - type: "github_secret"
+#       secret_name: "GH_SESSION"

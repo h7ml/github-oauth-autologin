@@ -1,0 +1,73 @@
+name: 自动登录保活（通用框架）
+
+on:
+  schedule:
+    - cron: '0 7 */5 * *'  # UTC 7:00，每5天运行
+  workflow_dispatch:
+    inputs:
+      site:
+        description: '站点名称（默认 clawcloud）'
+        required: false
+        default: 'clawcloud'
+
+jobs:
+  auto-login:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 缓存 Playwright 浏览器
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: 检查必需的环境变量
+        id: check-secrets
+        run: |
+          if [[ -z "${{ secrets.GH_USERNAME }}" ]] || [[ -z "${{ secrets.GH_PASSWORD }}" ]]; then
+            echo "⚠️  缺少必需的 Secrets: GH_USERNAME 或 GH_PASSWORD"
+            echo "📝 请在仓库 Settings -> Secrets 中配置这些变量"
+            echo "configured=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          echo "✅ 必需的 Secrets 已配置"
+          echo "configured=true" >> $GITHUB_OUTPUT
+
+      - name: 安装依赖
+        if: steps.check-secrets.outputs.configured == 'true'
+        run: |
+          pip install -r requirements.txt
+          playwright install chromium --with-deps
+
+      - name: 运行自动登录（通用框架）
+        if: steps.check-secrets.outputs.configured == 'true'
+        env:
+          GH_USERNAME: ${{ secrets.GH_USERNAME }}
+          GH_PASSWORD: ${{ secrets.GH_PASSWORD }}
+          GH_SESSION: ${{ secrets.GH_SESSION }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          REPO_TOKEN: ${{ secrets.REPO_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python main.py ${{ github.event.inputs.site || 'clawcloud' }}
+
+      - name: 上传截图（失败时）
+        if: failure() && steps.check-secrets.outputs.configured == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: '*.png'
+          retention-days: 7

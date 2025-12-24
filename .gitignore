@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# Playwright
+.cache/
+test-results/
+playwright-report/
+
+# 截图
+*.png
+
+# 凭据和 Cookie
+config/credentials.yaml
+cookies/
+*.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 日志
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 临时文件
+tmp/
+temp/

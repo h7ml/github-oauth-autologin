@@ -1,0 +1,80 @@
+name: 'GitHub OAuth Auto Login'
+description: '自动登录 GitHub（支持 2FA），输出 Session Cookie 供其他站点 OAuth 使用'
+author: 'h7ml'
+
+branding:
+  icon: 'log-in'
+  color: 'blue'
+
+inputs:
+  username:
+    description: 'GitHub 用户名'
+    required: true
+  password:
+    description: 'GitHub 密码'
+    required: true
+  session_cookie:
+    description: '已有的 GitHub Session Cookie（可选，用于快速登录）'
+    required: false
+  tg_bot_token:
+    description: 'Telegram Bot Token（2FA 验证码接收）'
+    required: false
+  tg_chat_id:
+    description: 'Telegram Chat ID（2FA 验证码接收）'
+    required: false
+  repo_token:
+    description: 'GitHub Personal Access Token（自动更新 GH_SESSION Secret）'
+    required: false
+  repository:
+    description: 'GitHub Repository（格式: owner/repo，自动更新 Secret 用）'
+    required: false
+
+outputs:
+  gh_session:
+    description: 'GitHub Session Cookie (user_session)'
+    value: ${{ steps.login.outputs.session }}
+  login_status:
+    description: '登录状态（success/failed）'
+    value: ${{ steps.login.outputs.status }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: 设置 Python 环境
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: 安装依赖
+      shell: bash
+      run: |
+        pip install -r ${{ github.action_path }}/requirements.txt
+        playwright install chromium
+
+    - name: 缓存 Playwright 浏览器
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ hashFiles(format('{0}/requirements.txt', github.action_path)) }}
+
+    - name: 执行 GitHub 登录
+      id: login
+      shell: bash
+      env:
+        GH_USERNAME: ${{ inputs.username }}
+        GH_PASSWORD: ${{ inputs.password }}
+        GH_SESSION: ${{ inputs.session_cookie }}
+        TG_BOT_TOKEN: ${{ inputs.tg_bot_token }}
+        TG_CHAT_ID: ${{ inputs.tg_chat_id }}
+        REPO_TOKEN: ${{ inputs.repo_token }}
+        GITHUB_REPOSITORY: ${{ inputs.repository }}
+      run: python ${{ github.action_path }}/login_only.py
+
+    - name: 上传失败截图
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: login-failure-screenshot
+        path: login_failed_*.png
+        retention-days: 7
