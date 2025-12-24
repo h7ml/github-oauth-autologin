@@ -50,6 +50,13 @@ jobs:
         if: steps.check-secrets.outputs.configured == 'true'
         run: |
           pip install -r requirements.txt
+
+      - name: 安装 Playwright 浏览器
+        if: steps.check-secrets.outputs.configured == 'true'
+        run: |
+          # Ubuntu 24.04 兼容性修复：libasound2 已更名为 libasound2t64
+          sudo apt-get update
+          sudo apt-get install -y libasound2t64 || sudo apt-get install -y libasound2
           playwright install chromium --with-deps
 
       - name: 运行自动登录（通用框架）

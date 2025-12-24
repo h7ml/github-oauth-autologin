@@ -3,6 +3,8 @@
 [![GitHub](https://img.shields.io/badge/GitHub-h7ml%2Fgithub--oauth--autologin-blue?logo=github)](https://github.com/h7ml/github-oauth-autologin)
 [![GitHub Marketplace](https://img.shields.io/badge/Marketplace-GitHub%20OAuth%20Auto%20Login-blue?logo=github)](https://github.com/marketplace/actions/github-oauth-auto-login)
 [![Release](https://img.shields.io/github/v/release/h7ml/github-oauth-autologin)](https://github.com/h7ml/github-oauth-autologin/releases)
+[![CI/CD](https://github.com/h7ml/github-oauth-autologin/actions/workflows/ci.yml/badge.svg)](https://github.com/h7ml/github-oauth-autologin/actions/workflows/ci.yml)
+[![Keep Alive](https://github.com/h7ml/github-oauth-autologin/actions/workflows/keep-alive.yml/badge.svg)](https://github.com/h7ml/github-oauth-autologin/actions/workflows/keep-alive.yml)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
