@@ -56,9 +56,7 @@ class TestCookieManager:
 
     @patch("core.cookie_manager.requests.get")
     @patch("core.cookie_manager.requests.put")
-    def test_save_to_github_secret_success(
-        self, mock_put, mock_get, cookie_manager, monkeypatch
-    ):
+    def test_save_to_github_secret_success(self, mock_put, mock_get, cookie_manager, monkeypatch):
         """测试成功更新 GitHub Secret"""
         monkeypatch.setenv("REPO_TOKEN", "test_token")
         monkeypatch.setenv("GITHUB_REPOSITORY", "user/repo")

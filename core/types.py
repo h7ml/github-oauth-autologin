@@ -78,9 +78,7 @@ class NotifierInterface(ABC):
     """通知器接口"""
 
     @abstractmethod
-    def notify(
-        self, message: str, level: str = "INFO", attachments: Optional[list[str]] = None
-    ):
+    def notify(self, message: str, level: str = "INFO", attachments: Optional[list[str]] = None):
         """发送通知"""
         pass
 
