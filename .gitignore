@@ -41,3 +41,22 @@ Thumbs.db
 # 临时文件
 tmp/
 temp/
+
+# 测试和覆盖率
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# 状态文件
+.athena_state.json
+*.jsonl
+
+# Pylint
+.pylint.d/
+
+# Black
+.black.cache/

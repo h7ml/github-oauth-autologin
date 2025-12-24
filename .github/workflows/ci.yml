@@ -1,0 +1,339 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  # 代码质量检查
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 安装依赖
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 代码格式检查（Black）
+        run: |
+          black --check core/ utils/ sites/ notifiers/ tests/
+        continue-on-error: false
+
+      - name: Pylint 检查
+        run: |
+          pylint core/ utils/ sites/ notifiers/ --exit-zero --output-format=colorized
+        continue-on-error: true
+
+      - name: 类型检查（Mypy）
+        run: |
+          mypy core/ utils/ --ignore-missing-imports
+        continue-on-error: true
+
+  # 单元测试
+  test:
+    name: Unit Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ['3.11', '3.12']
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: 安装依赖
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 运行测试
+        run: |
+          pytest -v --cov=core --cov=utils --cov=sites --cov=notifiers \
+                 --cov-report=xml --cov-report=term-missing
+
+      - name: 上传覆盖率报告
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+  # 安全检查
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: |
+          pip install --upgrade pip
+          pip install bandit safety
+
+      - name: Bandit 安全扫描
+        run: |
+          bandit -r core/ utils/ sites/ notifiers/ -f json -o bandit-report.json || true
+          bandit -r core/ utils/ sites/ notifiers/ -f screen
+        continue-on-error: true
+
+      - name: Safety 依赖检查
+        run: |
+          safety check --json || true
+        continue-on-error: true
+
+      - name: 上传安全报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+          retention-days: 30
+
+  # 构建检查
+  build:
+    name: Build Check
+    runs-on: ubuntu-latest
+    needs: [quality, test]
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 安装依赖
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          playwright install chromium --with-deps
+
+      - name: 验证配置文件
+        run: |
+          python -c "import yaml; yaml.safe_load(open('config/sites.yaml'))"
+
+      - name: 导入检查
+        run: |
+          python -c "from core.github_auth import GitHubAuthenticator"
+          python -c "from core.cookie_manager import CookieManager"
+          python -c "from core.state_manager import StateManager"
+          python -c "from utils.logger import setup_logger"
+          python -c "from utils.retry import retry_network"
+          python -c "from utils.security import mask_sensitive"
+
+      - name: 静态分析
+        run: |
+          python -m py_compile core/*.py utils/*.py sites/*.py notifiers/*.py
+
+  # 文档检查
+  docs:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 验证文档文件
+        run: |
+          test -f README.md
+          test -f README_OPTIMIZATION.md
+          test -f docs/index.html
+          test -f CLAUDE.md
+          test -f CHANGELOG.md
+
+      - name: 检查文档链接
+        run: |
+          # 检查 Markdown 文件中的链接（简单版本）
+          grep -r "\[.*\](.*)" *.md || true
+
+  # 代码覆盖率徽章更新
+  coverage-badge:
+    name: Update Coverage Badge
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 安装依赖
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install coverage-badge
+
+      - name: 生成覆盖率
+        run: |
+          pytest --cov=core --cov=utils --cov=sites --cov=notifiers --cov-report=xml
+
+      - name: 生成徽章
+        run: |
+          coverage-badge -o coverage.svg -f
+        continue-on-error: true
+
+  # 集成测试（可选）
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 安装依赖
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          playwright install chromium --with-deps
+
+      - name: 模拟运行（验证导入）
+        run: |
+          python -c "
+          from core.types import GitHubCredentials, SiteConfig
+          from core.github_auth import GitHubAuthenticator
+          from notifiers.telegram import TelegramNotifier
+          from core.state_manager import StateManager
+          
+          # 验证状态管理器
+          state = StateManager('.test_state.json')
+          state.record_login_attempt('test', True)
+          assert state.is_healthy('test')
+          print('✅ 集成测试通过')
+          "
+
+      - name: 清理测试文件
+        run: |
+          rm -f .test_state.json
+
+  # 性能测试（可选）
+  performance:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 安装依赖
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest-benchmark
+
+      - name: 运行性能测试
+        run: |
+          python -c "
+          import time
+          from utils.security import mask_sensitive
+          from core.state_manager import StateManager
+          
+          # 性能测试：敏感信息遮蔽
+          start = time.perf_counter()
+          for _ in range(10000):
+              mask_sensitive('abcdefghijklmnopqrstuvwxyz', 4)
+          duration = time.perf_counter() - start
+          print(f'mask_sensitive: {duration:.4f}s for 10k iterations')
+          assert duration < 1.0, 'Performance regression detected'
+          
+          # 性能测试：状态管理
+          state = StateManager('.perf_test.json')
+          start = time.perf_counter()
+          for i in range(100):
+              state.record_login_attempt(f'site_{i}', True)
+          state.save()
+          duration = time.perf_counter() - start
+          print(f'StateManager: {duration:.4f}s for 100 records')
+          assert duration < 0.5, 'Performance regression detected'
+          "
+
+      - name: 清理
+        run: rm -f .perf_test.json
+
+  # 汇总报告
+  summary:
+    name: Summary
+    runs-on: ubuntu-latest
+    needs: [quality, test, security, build, docs]
+    if: always()
+
+    steps:
+      - name: 检查状态
+        run: |
+          echo "## CI/CD Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Code Quality: ${{ needs.quality.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Unit Tests: ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Security Scan: ${{ needs.security.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Build Check: ${{ needs.build.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Documentation: ${{ needs.docs.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.quality.result }}" == "success" && \
+                "${{ needs.test.result }}" == "success" && \
+                "${{ needs.build.result }}" == "success" ]]; then
+            echo "🎉 **All checks passed!**" >> $GITHUB_STEP_SUMMARY
+            exit 0
+          else
+            echo "❌ **Some checks failed. Please review the logs.**" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+

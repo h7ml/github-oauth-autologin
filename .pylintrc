@@ -1,0 +1,124 @@
+[MASTER]
+# Python 代码风格检查配置
+init-hook='import sys; sys.path.append(".")'
+jobs=1
+persistent=yes
+suggestion-mode=yes
+unsafe-load-any-extension=no
+
+[MESSAGES CONTROL]
+# 禁用的检查项
+disable=
+    C0111,  # missing-docstring (我们有详细的 docstring)
+    C0103,  # invalid-name (允许短变量名如 r, f, e)
+    R0913,  # too-many-arguments (某些函数需要多参数)
+    R0914,  # too-many-locals
+    R0912,  # too-many-branches
+    R0915,  # too-many-statements
+    W0703,  # broad-except (某些地方需要捕获所有异常)
+    W0221,  # arguments-differ (Protocol 实现)
+    C0114,  # missing-module-docstring
+    C0115,  # missing-class-docstring
+    C0116,  # missing-function-docstring
+    R1705,  # no-else-return
+    R1710,  # inconsistent-return-statements
+    R0401,  # cyclic-import
+
+[REPORTS]
+output-format=colorized
+reports=no
+score=yes
+
+[REFACTORING]
+max-nested-blocks=5
+never-returning-functions=sys.exit
+
+[BASIC]
+argument-naming-style=snake_case
+attr-naming-style=snake_case
+class-attribute-naming-style=any
+class-const-naming-style=UPPER_CASE
+class-naming-style=PascalCase
+const-naming-style=UPPER_CASE
+function-naming-style=snake_case
+inlinevar-naming-style=any
+method-naming-style=snake_case
+module-naming-style=snake_case
+variable-naming-style=snake_case
+
+good-names=i,j,k,n,e,f,r,_,pk,el,ok,id,pk
+
+[FORMAT]
+indent-after-paren=4
+indent-string='    '
+max-line-length=100
+max-module-lines=1000
+
+[LOGGING]
+logging-format-style=new
+logging-modules=logging
+
+[MISCELLANEOUS]
+notes=FIXME,XXX,TODO
+
+[SIMILARITIES]
+ignore-comments=yes
+ignore-docstrings=yes
+ignore-imports=yes
+min-similarity-lines=6
+
+[SPELLING]
+max-spelling-suggestions=4
+spelling-ignore-comment-directives=fmt: on,fmt: off,noqa:,noqa,nosec,isort:skip,mypy:
+
+[STRING]
+check-quote-consistency=no
+check-str-concat-over-line-jumps=no
+
+[TYPECHECK]
+contextmanager-decorators=contextlib.contextmanager
+ignore-mixin-members=yes
+ignore-none=yes
+ignore-on-opaque-inference-type=yes
+ignored-classes=optparse.Values,thread._local,_thread._local
+missing-member-hint=yes
+missing-member-hint-distance=1
+missing-member-max-choices=1
+
+[VARIABLES]
+allow-global-unused-variables=yes
+callbacks=cb_,_cb
+dummy-variables-rgx=_+$|(_[a-zA-Z0-9_]*[a-zA-Z0-9]+?$)|dummy|^ignored_|^unused_
+ignored-argument-names=_.*|^ignored_|^unused_
+init-import=no
+redefining-builtins-modules=six.moves,past.builtins,future.builtins,builtins,io
+
+[CLASSES]
+defining-attr-methods=__init__,__new__,setUp,__post_init__
+exclude-protected=_asdict,_fields,_replace,_source,_make
+valid-classmethod-first-arg=cls
+valid-metaclass-classmethod-first-arg=cls
+
+[DESIGN]
+max-args=8
+max-attributes=12
+max-bool-expr=5
+max-branches=15
+max-locals=20
+max-parents=7
+max-public-methods=25
+max-returns=6
+max-statements=60
+min-public-methods=0
+
+[IMPORTS]
+allow-wildcard-with-all=no
+analyse-fallback-blocks=no
+deprecated-modules=optparse,tkinter.tix
+ext-import-graph=
+import-graph=
+int-import-graph=
+known-standard-library=
+known-third-party=enchant
+preferred-modules=
+
