@@ -25,7 +25,7 @@ class OAuthFlowController:
 
     def handle_authorization(self, page) -> bool:
         """处理 OAuth 授权页面"""
-        if 'github.com/login/oauth/authorize' not in page.url:
+        if "github.com/login/oauth/authorize" not in page.url:
             return True
 
         print("🔹 处理 OAuth 授权...")
@@ -33,7 +33,7 @@ class OAuthFlowController:
         authorize_selectors = [
             'button[name="authorize"]',
             'button:has-text("Authorize")',
-            'button:has-text("授权")'
+            'button:has-text("授权")',
         ]
 
         for selector in authorize_selectors:
@@ -43,7 +43,7 @@ class OAuthFlowController:
                     element.click()
                     print("✅ 已点击授权按钮")
                     time.sleep(3)
-                    page.wait_for_load_state('networkidle', timeout=30000)
+                    page.wait_for_load_state("networkidle", timeout=30000)
                     return True
             except Exception:
                 pass
@@ -59,7 +59,7 @@ class OAuthFlowController:
 
             # 检查成功模式
             for pattern in success_patterns:
-                if pattern.startswith('!'):
+                if pattern.startswith("!"):
                     # 反向匹配（不包含）
                     if pattern[1:] not in url:
                         continue
@@ -70,7 +70,7 @@ class OAuthFlowController:
                         return True
 
             # 处理 OAuth 授权页面
-            if 'github.com/login/oauth/authorize' in url:
+            if "github.com/login/oauth/authorize" in url:
                 self.handle_authorization(page)
 
             time.sleep(1)

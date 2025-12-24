@@ -24,31 +24,25 @@ class TestStateManager:
 
     def test_record_login_success(self, state_manager):
         """测试记录成功登录"""
-        state_manager.record_login_attempt(
-            site="test_site",
-            success=True,
-            two_factor_used=True
-        )
+        state_manager.record_login_attempt(site="test_site", success=True, two_factor_used=True)
 
         site_state = state_manager.get_site_state("test_site")
         assert site_state is not None
-        assert site_state['total_attempts'] == 1
-        assert site_state['total_successes'] == 1
-        assert site_state['consecutive_failures'] == 0
-        assert site_state['two_factor_used'] is True
+        assert site_state["total_attempts"] == 1
+        assert site_state["total_successes"] == 1
+        assert site_state["consecutive_failures"] == 0
+        assert site_state["two_factor_used"] is True
 
     def test_record_login_failure(self, state_manager):
         """测试记录失败登录"""
         state_manager.record_login_attempt(
-            site="test_site",
-            success=False,
-            error_message="Test error"
+            site="test_site", success=False, error_message="Test error"
         )
 
         site_state = state_manager.get_site_state("test_site")
-        assert site_state['total_failures'] == 1
-        assert site_state['consecutive_failures'] == 1
-        assert site_state['last_error'] == "Test error"
+        assert site_state["total_failures"] == 1
+        assert site_state["consecutive_failures"] == 1
+        assert site_state["last_error"] == "Test error"
 
     def test_consecutive_failures(self, state_manager):
         """测试连续失败计数"""
@@ -57,12 +51,12 @@ class TestStateManager:
         state_manager.record_login_attempt("test_site", False)
 
         site_state = state_manager.get_site_state("test_site")
-        assert site_state['consecutive_failures'] == 2
+        assert site_state["consecutive_failures"] == 2
 
         # 成功一次应重置
         state_manager.record_login_attempt("test_site", True)
         site_state = state_manager.get_site_state("test_site")
-        assert site_state['consecutive_failures'] == 0
+        assert site_state["consecutive_failures"] == 0
 
     def test_is_healthy(self, state_manager):
         """测试健康检查"""
@@ -87,7 +81,7 @@ class TestStateManager:
         new_manager = StateManager(str(state_file))
         site_state = new_manager.get_site_state("test_site")
         assert site_state is not None
-        assert site_state['total_successes'] == 1
+        assert site_state["total_successes"] == 1
 
     def test_get_stats(self, state_manager):
         """测试统计信息"""
@@ -99,4 +93,3 @@ class TestStateManager:
         assert "成功次数: 1" in stats
         assert "失败次数: 1" in stats
         assert "成功率: 50.0%" in stats
-
