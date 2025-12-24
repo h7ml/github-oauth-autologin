@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="HaloLight Athena - GitHub OAuth 自动登录框架，支持多站点配置，完善的 2FA 处理">
+    <meta name="keywords" content="GitHub,OAuth,自动登录,2FA,Telegram,Python,Playwright">
+    <meta name="author" content="h7ml">
+    <title>HaloLight Athena - GitHub OAuth 自动登录框架</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --dark-bg: #1e293b;
+            --light-bg: #f8fafc;
+            --border-color: #e2e8f0;
+            --code-bg: #f1f5f9;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 
+                         'Ubuntu', 'Cantarell', sans-serif;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background: var(--light-bg);
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, var(--primary-color), #1e40af);
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .badges {
+            margin-top: 1rem;
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Navigation */
+        nav {
+            background: white;
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        nav a {
+            color: var(--text-primary);
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        nav a:hover {
+            background: var(--light-bg);
+            color: var(--primary-color);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        /* Sections */
+        section {
+            margin-bottom: 4rem;
+        }
+
+        section h2 {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
+            padding-bottom: 0.5rem;
+            display: inline-block;
+        }
+
+        section h3 {
+            font-size: 1.5rem;
+            margin: 2rem 0 1rem;
+            color: var(--text-primary);
+        }
+
+        /* Feature Grid */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        }
+
+        .feature-card .icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card h3 {
+            margin-top: 0;
+            font-size: 1.3rem;
+            color: var(--primary-color);
+        }
+
+        /* Code Blocks */
+        pre {
+            background: var(--code-bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            border-left: 4px solid var(--primary-color);
+            margin: 1rem 0;
+        }
+
+        code {
+            font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        /* Architecture Diagram */
+        .architecture {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin: 2rem 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .module {
+            background: var(--light-bg);
+            padding: 1rem;
+            margin: 0.5rem 0;
+            border-left: 4px solid var(--primary-color);
+            border-radius: 4px;
+        }
+
+        .module h4 {
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        /* API Documentation */
+        .api-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin: 1rem 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .api-method {
+            margin: 1.5rem 0;
+            padding: 1rem;
+            border-left: 4px solid var(--secondary-color);
+            background: var(--light-bg);
+            border-radius: 4px;
+        }
+
+        .api-method h4 {
+            color: var(--secondary-color);
+            font-family: monospace;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Optimization List */
+        .optimization-list {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .optimization-item {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border-left: 4px solid var(--secondary-color);
+        }
+
+        .optimization-item.high-priority {
+            border-left-color: var(--danger-color);
+        }
+
+        .optimization-item.medium-priority {
+            border-left-color: var(--warning-color);
+        }
+
+        .priority-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .high {
+            background: #fee2e2;
+            color: var(--danger-color);
+        }
+
+        .medium {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .low {
+            background: #dbeafe;
+            color: var(--primary-color);
+        }
+
+        /* Footer */
+        footer {
+            background: var(--dark-bg);
+            color: white;
+            text-align: center;
+            padding: 2rem;
+            margin-top: 4rem;
+        }
+
+        footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 2rem;
+            }
+
+            nav ul {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .container {
+                padding: 2rem 1rem;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Utility Classes */
+        .text-center {
+            text-align: center;
+        }
+
+        .mt-2 {
+            margin-top: 2rem;
+        }
+
+        .mb-2 {
+            margin-bottom: 2rem;
+        }
+
+        a.button {
+            display: inline-block;
+            background: var(--primary-color);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        a.button:hover {
+            background: #1e40af;
+        }
+
+        a.button.secondary {
+            background: var(--secondary-color);
+        }
+
+        a.button.secondary:hover {
+            background: #059669;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🛡️ HaloLight Athena</h1>
+        <p>GitHub OAuth 自动登录框架 - 企业级、安全、可扩展</p>
+        <div class="badges">
+            <span class="badge">Python 3.11+</span>
+            <span class="badge">Playwright</span>
+            <span class="badge">Pydantic</span>
+            <span class="badge">Pytest</span>
+            <span class="badge">MIT License</span>
+        </div>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="#features">特性</a></li>
+            <li><a href="#architecture">架构</a></li>
+            <li><a href="#installation">安装</a></li>
+            <li><a href="#usage">使用</a></li>
+            <li><a href="#api">API 文档</a></li>
+            <li><a href="#optimizations">优化改进</a></li>
+            <li><a href="#testing">测试</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <!-- Features Section -->
+        <section id="features">
+            <h2>✨ 核心特性</h2>
+            <div class="features">
+                <div class="feature-card">
+                    <div class="icon">🔧</div>
+                    <h3>配置驱动</h3>
+                    <p>通过 YAML 配置支持任意使用 GitHub OAuth 的站点，无需修改代码</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🔐</div>
+                    <h3>完善 2FA 处理</h3>
+                    <p>自动处理设备验证、GitHub Mobile、TOTP 验证码等多种认证方式</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">📱</div>
+                    <h3>Telegram 集成</h3>
+                    <p>实时通知 + 双向通信，支持接收验证码并自动填入</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🍪</div>
+                    <h3>智能 Cookie 管理</h3>
+                    <p>自动提取并更新到 GitHub Secrets/文件，支持加密存储</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🎯</div>
+                    <h3>插件化架构</h3>
+                    <p>核心模块独立，易于扩展新站点和功能</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🚀</div>
+                    <h3>CI/CD 支持</h3>
+                    <p>GitHub Actions 自动化运行，可作为可复用 Action</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🛡️</div>
+                    <h3>企业级安全</h3>
+                    <p>敏感信息遮蔽、配置验证、异常处理精确化</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">📊</div>
+                    <h3>状态持久化</h3>
+                    <p>记录登录历史、统计数据、健康检查</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🔄</div>
+                    <h3>自动重试</h3>
+                    <p>网络请求智能重试，提高可靠性</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Architecture Section -->
+        <section id="architecture">
+            <h2>🏗️ 项目架构</h2>
+            <div class="architecture">
+                <h3>模块划分</h3>
+                <div class="module">
+                    <h4>core/ - 核心模块</h4>
+                    <p><strong>types.py</strong>: 类型定义（使用 dataclass 和 Protocol）</p>
+                    <p><strong>github_auth.py</strong>: GitHub 认证处理器（2FA、设备验证）</p>
+                    <p><strong>oauth_handler.py</strong>: OAuth 流程控制器</p>
+                    <p><strong>cookie_manager.py</strong>: Cookie 管理器（提取、保存、加密）</p>
+                    <p><strong>constants.py</strong>: 常量管理（超时、选择器、URL 模式）</p>
+                    <p><strong>state_manager.py</strong>: 状态持久化管理器</p>
+                    <p><strong>validators.py</strong>: 配置验证器（Pydantic）</p>
+                </div>
+                <div class="module">
+                    <h4>sites/ - 站点适配器</h4>
+                    <p><strong>base.py</strong>: 基类（SiteAdapter）</p>
+                    <p><strong>clawcloud.py</strong>: ClawCloud 站点实现</p>
+                    <p>可扩展: 添加新站点只需继承 SiteAdapter</p>
+                </div>
+                <div class="module">
+                    <h4>notifiers/ - 通知器</h4>
+                    <p><strong>telegram.py</strong>: Telegram 通知器实现</p>
+                    <p>支持: 发送消息、发送图片、等待用户输入</p>
+                </div>
+                <div class="module">
+                    <h4>utils/ - 工具模块</h4>
+                    <p><strong>logger.py</strong>: 统一日志系统（彩色输出、自定义级别）</p>
+                    <p><strong>security.py</strong>: 安全工具（敏感信息遮蔽）</p>
+                    <p><strong>retry.py</strong>: 重试装饰器（网络请求、Playwright 操作）</p>
+                </div>
+                <div class="module">
+                    <h4>tests/ - 测试模块</h4>
+                    <p>完整的单元测试覆盖（Pytest + Mock）</p>
+                    <p>测试覆盖率配置（pytest-cov）</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Installation Section -->
+        <section id="installation">
+            <h2>📦 安装指南</h2>
+            <h3>1. 克隆仓库</h3>
+            <pre><code>git clone https://github.com/h7ml/github-oauth-autologin.git
+cd halolight-athena</code></pre>
+
+            <h3>2. 安装依赖</h3>
+            <pre><code>pip install -r requirements.txt
+playwright install chromium</code></pre>
+
+            <h3>3. 配置文件</h3>
+            <p>复制配置模板：</p>
+            <pre><code>cp config/credentials.yaml.example config/credentials.yaml</code></pre>
+            <p>编辑 <code>config/sites.yaml</code> 添加站点配置</p>
+
+            <h3>4. 环境变量</h3>
+            <pre><code>export GH_USERNAME="your_username"
+export GH_PASSWORD="your_password"
+export TG_BOT_TOKEN="your_bot_token"  # 可选
+export TG_CHAT_ID="your_chat_id"      # 可选</code></pre>
+        </section>
+
+        <!-- Usage Section -->
+        <section id="usage">
+            <h2>🚀 使用方法</h2>
+            
+            <h3>本地运行</h3>
+            <pre><code>python main.py clawcloud</code></pre>
+
+            <h3>作为 GitHub Action 使用</h3>
+            <pre><code>- name: 登录 GitHub
+  uses: h7ml/github-oauth-autologin@v1
+  with:
+    username: ${{ secrets.GH_USERNAME }}
+    password: ${{ secrets.GH_PASSWORD }}
+    session_cookie: ${{ secrets.GH_SESSION }}
+    tg_bot_token: ${{ secrets.TG_BOT_TOKEN }}
+    tg_chat_id: ${{ secrets.TG_CHAT_ID }}
+    repo_token: ${{ secrets.REPO_TOKEN }}
+    repository: ${{ github.repository }}</code></pre>
+
+            <h3>运行测试</h3>
+            <pre><code># 运行所有测试
+pytest
+
+# 运行测试并生成覆盖率报告
+pytest --cov=core --cov=utils --cov-report=html
+
+# 运行 pylint 检查
+pylint core/ utils/ sites/ notifiers/</code></pre>
+        </section>
+
+        <!-- API Documentation -->
+        <section id="api">
+            <h2>📚 API 文档</h2>
+            
+            <div class="api-section">
+                <h3>GitHubAuthenticator</h3>
+                <p>GitHub 认证处理器，负责完整的登录流程</p>
+                
+                <div class="api-method">
+                    <h4>login(page, credentials, two_factor_config, device_config) -> bool</h4>
+                    <p><strong>参数：</strong></p>
+                    <ul>
+                        <li><code>page</code>: Playwright Page 对象</li>
+                        <li><code>credentials</code>: GitHub 凭据（用户名、密码）</li>
+                        <li><code>two_factor_config</code>: 2FA 配置</li>
+                        <li><code>device_config</code>: 设备验证配置</li>
+                    </ul>
+                    <p><strong>返回：</strong>登录是否成功</p>
+                </div>
+
+                <div class="api-method">
+                    <h4>handle_2fa(page, config) -> bool</h4>
+                    <p>处理双因素认证（自动路由 Mobile/TOTP）</p>
+                </div>
+
+                <div class="api-method">
+                    <h4>handle_device_verification(page, config) -> bool</h4>
+                    <p>处理设备验证（等待用户邮箱确认）</p>
+                </div>
+            </div>
+
+            <div class="api-section">
+                <h3>CookieManager</h3>
+                <p>Cookie 管理器，负责提取和保存 Cookie</p>
+                
+                <div class="api-method">
+                    <h4>extract_session(context, domain, name) -> Optional[str]</h4>
+                    <p>从浏览器上下文中提取指定 Cookie</p>
+                </div>
+
+                <div class="api-method">
+                    <h4>save_cookies(value, targets) -> None</h4>
+                    <p>保存 Cookie 到多个目标（GitHub Secret、文件、环境变量）</p>
+                </div>
+            </div>
+
+            <div class="api-section">
+                <h3>StateManager</h3>
+                <p>状态管理器，持久化登录历史和统计</p>
+                
+                <div class="api-method">
+                    <h4>record_login_attempt(site, success, ...) -> None</h4>
+                    <p>记录一次登录尝试</p>
+                </div>
+
+                <div class="api-method">
+                    <h4>is_healthy(site, max_consecutive_failures) -> bool</h4>
+                    <p>检查站点健康状态</p>
+                </div>
+
+                <div class="api-method">
+                    <h4>get_stats(site) -> str</h4>
+                    <p>获取站点统计信息</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Optimizations Section -->
+        <section id="optimizations">
+            <h2>🎯 优化改进</h2>
+            <p class="mb-2">本次优化全面提升了项目的安全性、可靠性和可维护性：</p>
+            
+            <div class="optimization-list">
+                <div class="optimization-item high-priority">
+                    <span class="priority-badge high">高优先级</span>
+                    <h3>异常处理精确化</h3>
+                    <p>✅ 使用 Playwright 特定异常类型（TimeoutError, Error）替代宽泛的 Exception</p>
+                    <p>✅ 网络请求使用 RequestException 进行精确捕获</p>
+                </div>
+
+                <div class="optimization-item high-priority">
+                    <span class="priority-badge high">高优先级</span>
+                    <h3>敏感信息遮蔽</h3>
+                    <p>✅ 实现 mask_sensitive() 工具函数</p>
+                    <p>✅ 日志输出自动遮蔽 Cookie、密码等敏感信息</p>
+                    <p>✅ Telegram 通知中的敏感数据部分遮蔽</p>
+                </div>
+
+                <div class="optimization-item high-priority">
+                    <span class="priority-badge high">高优先级</span>
+                    <h3>网络请求重试机制</h3>
+                    <p>✅ 实现 retry 装饰器，支持指数退避</p>
+                    <p>✅ Telegram API 自动重试（最多 3 次）</p>
+                    <p>✅ GitHub API 更新 Secret 重试</p>
+                </div>
+
+                <div class="optimization-item high-priority">
+                    <span class="priority-badge high">高优先级</span>
+                    <h3>配置验证</h3>
+                    <p>✅ 使用 Pydantic 进行配置 Schema 验证</p>
+                    <p>✅ 启动时验证凭据格式（密码长度、Cookie 格式）</p>
+                    <p>✅ 站点配置完整性检查</p>
+                </div>
+
+                <div class="optimization-item medium-priority">
+                    <span class="priority-badge medium">中优先级</span>
+                    <h3>统一日志系统</h3>
+                    <p>✅ 使用 Python logging 替代 print</p>
+                    <p>✅ 彩色输出和图标支持</p>
+                    <p>✅ 自定义日志级别（SUCCESS, STEP）</p>
+                </div>
+
+                <div class="optimization-item medium-priority">
+                    <span class="priority-badge medium">中优先级</span>
+                    <h3>完善类型标注</h3>
+                    <p>✅ 所有函数添加参数和返回值类型</p>
+                    <p>✅ 支持 mypy 静态类型检查</p>
+                    <p>✅ IDE 代码补全体验提升</p>
+                </div>
+
+                <div class="optimization-item medium-priority">
+                    <span class="priority-badge medium">中优先级</span>
+                    <h3>常量管理</h3>
+                    <p>✅ 创建 core/constants.py 统一管理</p>
+                    <p>✅ 超时值、选择器、URL 模式集中定义</p>
+                    <p>✅ 消息模板统一管理</p>
+                </div>
+
+                <div class="optimization-item medium-priority">
+                    <span class="priority-badge medium">中优先级</span>
+                    <h3>状态持久化</h3>
+                    <p>✅ StateManager 记录登录历史</p>
+                    <p>✅ 统计成功率、连续失败次数</p>
+                    <p>✅ 健康检查功能</p>
+                </div>
+
+                <div class="optimization-item low">
+                    <span class="priority-badge low">完成</span>
+                    <h3>代码规范</h3>
+                    <p>✅ 添加 .pylintrc 配置</p>
+                    <p>✅ 添加 pyproject.toml（Black、Mypy、Pytest）</p>
+                    <p>✅ 依赖版本固定</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Testing Section -->
+        <section id="testing">
+            <h2>🧪 测试覆盖</h2>
+            <p>项目包含完整的单元测试套件：</p>
+            
+            <h3>测试文件</h3>
+            <ul>
+                <li><code>tests/test_security.py</code> - 安全工具测试</li>
+                <li><code>tests/test_cookie_manager.py</code> - Cookie 管理测试</li>
+                <li><code>tests/test_validators.py</code> - 配置验证测试</li>
+                <li><code>tests/test_state_manager.py</code> - 状态管理测试</li>
+                <li><code>tests/conftest.py</code> - 共享 Fixtures</li>
+            </ul>
+
+            <h3>运行测试</h3>
+            <pre><code># 运行所有测试
+pytest
+
+# 详细输出
+pytest -v
+
+# 覆盖率报告
+pytest --cov=core --cov=utils --cov-report=term-missing
+
+# 生成 HTML 报告
+pytest --cov=core --cov=utils --cov-report=html
+open htmlcov/index.html</code></pre>
+
+            <h3>代码质量检查</h3>
+            <pre><code># Pylint
+pylint core/ utils/ sites/ notifiers/
+
+# Mypy 类型检查
+mypy core/ utils/
+
+# Black 格式化
+black core/ utils/ sites/ notifiers/ tests/</code></pre>
+        </section>
+
+        <!-- Quick Links -->
+        <section class="text-center mt-2">
+            <h2>🔗 快速链接</h2>
+            <p>
+                <a href="https://github.com/h7ml/github-oauth-autologin" class="button">GitHub 仓库</a>
+                <a href="https://github.com/h7ml/github-oauth-autologin/issues" class="button secondary">提交问题</a>
+            </p>
+        </section>
+    </div>
+
+    <footer>
+        <p>
+            &copy; 2024 <a href="https://github.com/h7ml">h7ml</a> | 
+            <a href="https://github.com/h7ml/github-oauth-autologin">HaloLight Athena</a> | 
+            MIT License
+        </p>
+        <p style="margin-top: 0.5rem; opacity: 0.8;">
+            灵感来自 <a href="https://github.com/oyz8/ClawCloud-Run">oyz8/ClawCloud-Run</a>
+        </p>
+    </footer>
+
+    <script>
+        // 平滑滚动
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // 导航高亮
+        window.addEventListener('scroll', () => {
+            const sections = document.querySelectorAll('section[id]');
+            const navLinks = document.querySelectorAll('nav a[href^="#"]');
+            
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (scrollY >= (sectionTop - 200)) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.style.color = '';
+                link.style.background = '';
+                if (link.getAttribute('href') === `#${current}`) {
+                    link.style.color = 'var(--primary-color)';
+                    link.style.background = 'var(--light-bg)';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+

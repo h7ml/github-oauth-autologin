@@ -1,129 +1,233 @@
 """GitHub 认证器"""
 import time
+import logging
 from typing import Optional
-from core.types import GitHubCredentials, TwoFactorConfig, DeviceVerificationConfig, NotifierInterface
+from playwright.sync_api import Page, TimeoutError as PlaywrightTimeout, Error as PlaywrightError
+
+from core.types import (
+    GitHubCredentials,
+    TwoFactorConfig,
+    DeviceVerificationConfig,
+    NotifierInterface
+)
+from core.constants import Timeouts, Selectors, GitHubUrls, Messages
+
+logger = logging.getLogger(__name__)
 
 
 class GitHubAuthenticator:
-    """GitHub 认证处理器"""
+    """GitHub 认证处理器
+    
+    负责处理完整的 GitHub 登录流程，包括：
+    - 基本凭据认证
+    - 双因素认证（GitHub Mobile / TOTP）
+    - 设备验证
+    - 错误处理和截图
+    
+    Attributes:
+        notifier: 通知器实例，用于发送实时通知和接收用户输入
+        screenshots: 截图文件路径列表
+    """
 
     def __init__(self, notifier: NotifierInterface):
+        """初始化认证器
+        
+        Args:
+            notifier: 通知器实例
+        """
         self.notifier = notifier
-        self.screenshots = []
+        self.screenshots: list[str] = []
 
     def login(
         self,
-        page,
+        page: Page,
         credentials: GitHubCredentials,
         two_factor_config: TwoFactorConfig,
         device_config: DeviceVerificationConfig
     ) -> bool:
-        """完整的 GitHub 登录流程"""
-        self._log("登录 GitHub...", "STEP")
+        """完整的 GitHub 登录流程
+        
+        Args:
+            page: Playwright Page 对象
+            credentials: GitHub 凭据
+            two_factor_config: 双因素认证配置
+            device_config: 设备验证配置
+            
+        Returns:
+            是否登录成功
+        """
+        logger.info("🔹 登录 GitHub...")
         self._screenshot(page, "github_登录页")
 
         # 输入凭据
-        try:
-            page.locator('input[name="login"]').fill(credentials.username)
-            page.locator('input[name="password"]').fill(credentials.password)
-            self._log("已输入凭据", "SUCCESS")
-        except Exception as e:
-            self._log(f"输入失败: {e}", "ERROR")
+        if not self._fill_credentials(page, credentials):
             return False
 
         self._screenshot(page, "github_已填写")
 
         # 提交表单
-        try:
-            page.locator('input[type="submit"], button[type="submit"]').first.click()
-        except Exception:
-            pass
+        self._submit_login_form(page)
 
-        time.sleep(3)
-        page.wait_for_load_state('networkidle', timeout=30000)
+        time.sleep(Timeouts.LOGIN_SLEEP / 1000)
+        self._wait_for_page_load(page)
         self._screenshot(page, "github_登录后")
 
         url = page.url
-        self._log(f"当前 URL: {url}", "INFO")
+        logger.info(f"当前 URL: {url}")
 
         # 处理设备验证
-        if 'verified-device' in url or 'device-verification' in url:
+        if GitHubUrls.DEVICE_VERIFICATION in url or GitHubUrls.DEVICE_VERIFICATION_ALT in url:
             if not self.handle_device_verification(page, device_config):
                 return False
             time.sleep(2)
-            page.wait_for_load_state('networkidle', timeout=30000)
+            self._wait_for_page_load(page)
 
         # 处理双因素认证
-        if 'two-factor' in page.url:
+        if GitHubUrls.TWO_FACTOR in page.url:
             if not self.handle_2fa(page, two_factor_config):
                 return False
 
         # 检查错误
-        try:
-            err = page.locator('.flash-error').first
-            if err.is_visible(timeout=2000):
-                self._log(f"错误: {err.inner_text()}", "ERROR")
-                return False
-        except Exception:
-            pass
+        if self._check_login_error(page):
+            return False
 
+        logger.info("✅ GitHub 认证成功")
         return True
 
-    def handle_device_verification(self, page, config: DeviceVerificationConfig) -> bool:
-        """处理设备验证"""
-        self._log(f"需要设备验证，等待 {config.wait} 秒...", "WARN")
+    def _fill_credentials(self, page: Page, credentials: GitHubCredentials) -> bool:
+        """填写登录凭据
+        
+        Args:
+            page: Page 对象
+            credentials: 凭据
+            
+        Returns:
+            是否成功
+        """
+        try:
+            page.locator(Selectors.LOGIN_INPUT).fill(credentials.username)
+            page.locator(Selectors.PASSWORD_INPUT).fill(credentials.password)
+            logger.info("✅ 已输入凭据")
+            return True
+        except (PlaywrightTimeout, PlaywrightError) as e:
+            logger.error(f"❌ 输入凭据失败: {e}")
+            return False
+
+    def _submit_login_form(self, page: Page) -> None:
+        """提交登录表单"""
+        try:
+            page.locator(Selectors.SUBMIT_BUTTON).first.click()
+        except (PlaywrightTimeout, PlaywrightError):
+            logger.warning("未找到提交按钮，可能已自动提交")
+
+    def _wait_for_page_load(self, page: Page, timeout: int = Timeouts.NETWORK_IDLE) -> None:
+        """等待页面加载完成"""
+        try:
+            page.wait_for_load_state('networkidle', timeout=timeout)
+        except PlaywrightTimeout:
+            logger.warning("页面加载超时，继续执行")
+
+    def _check_login_error(self, page: Page) -> bool:
+        """检查登录错误
+        
+        Returns:
+            是否有错误
+        """
+        try:
+            err = page.locator(Selectors.ERROR_FLASH).first
+            if err.is_visible(timeout=2000):
+                error_text = err.inner_text()
+                logger.error(f"❌ 登录错误: {error_text}")
+                return True
+        except (PlaywrightTimeout, PlaywrightError):
+            pass
+        return False
+
+    def handle_device_verification(
+        self,
+        page: Page,
+        config: DeviceVerificationConfig
+    ) -> bool:
+        """处理设备验证
+        
+        Args:
+            page: Page 对象
+            config: 设备验证配置
+            
+        Returns:
+            是否成功
+        """
+        logger.warning(f"⚠️ 需要设备验证，等待 {config.wait} 秒...")
         self._screenshot(page, "设备验证")
 
-        self.notifier.notify(f"""⚠️ <b>需要设备验证</b>
-
-请在 {config.wait} 秒内批准：
-1️⃣ 检查邮箱点击链接
-2️⃣ 或在 GitHub App 批准""", "WARN")
+        self.notifier.notify(
+            Messages.DEVICE_VERIFICATION_NEEDED.format(wait=config.wait),
+            "WARN"
+        )
 
         if self.screenshots:
             self.notifier.send_photo(self.screenshots[-1], "设备验证页面")
 
         for i in range(config.wait):
             time.sleep(1)
-            if i % 5 == 0:
-                self._log(f"  等待... ({i}/{config.wait}秒)", "INFO")
+            if i % 5 == 0 and i > 0:
+                logger.info(f"  等待... ({i}/{config.wait}秒)")
                 url = page.url
-                if 'verified-device' not in url and 'device-verification' not in url:
-                    self._log("设备验证通过！", "SUCCESS")
+                if GitHubUrls.DEVICE_VERIFICATION not in url and \
+                   GitHubUrls.DEVICE_VERIFICATION_ALT not in url:
+                    logger.info("✅ 设备验证通过！")
                     self.notifier.notify("✅ <b>设备验证通过</b>", "SUCCESS")
                     return True
                 try:
                     page.reload(timeout=10000)
-                    page.wait_for_load_state('networkidle', timeout=10000)
-                except Exception:
+                    self._wait_for_page_load(page, 10000)
+                except (PlaywrightTimeout, PlaywrightError):
                     pass
 
-        if 'verified-device' not in page.url:
+        # 最后检查一次
+        if GitHubUrls.DEVICE_VERIFICATION not in page.url and \
+           GitHubUrls.DEVICE_VERIFICATION_ALT not in page.url:
             return True
 
-        self._log("设备验证超时", "ERROR")
+        logger.error("❌ 设备验证超时")
         self.notifier.notify("❌ <b>设备验证超时</b>", "ERROR")
         return False
 
-    def handle_2fa(self, page, config: TwoFactorConfig) -> bool:
-        """处理双因素认证（自动路由）"""
-        self._log("需要双因素认证", "WARN")
+    def handle_2fa(self, page: Page, config: TwoFactorConfig) -> bool:
+        """处理双因素认证（自动路由）
+        
+        Args:
+            page: Page 对象
+            config: 2FA 配置
+            
+        Returns:
+            是否成功
+        """
+        logger.warning("⚠️ 需要双因素认证")
         self._screenshot(page, "双因素认证")
 
-        if 'two-factor/mobile' in page.url:
+        if GitHubUrls.TWO_FACTOR_MOBILE in page.url:
             return self._handle_2fa_mobile(page, config.mobile_wait)
         else:
             return self._handle_2fa_totp(page, config.totp_wait)
 
-    def _handle_2fa_mobile(self, page, timeout: int) -> bool:
-        """处理 GitHub Mobile 验证"""
-        self._log(f"等待 GitHub Mobile 批准（{timeout}秒）...", "WARN")
+    def _handle_2fa_mobile(self, page: Page, timeout: int) -> bool:
+        """处理 GitHub Mobile 验证
+        
+        Args:
+            page: Page 对象
+            timeout: 超时时间（秒）
+            
+        Returns:
+            是否成功
+        """
+        logger.warning(f"⚠️ 等待 GitHub Mobile 批准（{timeout}秒）...")
 
         shot = self._screenshot(page, "2fa_mobile")
-        self.notifier.notify(f"""⚠️ <b>需要双因素认证（GitHub Mobile）</b>
-
-请打开手机 GitHub App 批准本次登录。
-等待时间：{timeout} 秒""", "WARN")
+        self.notifier.notify(
+            Messages.TWO_FACTOR_MOBILE_NEEDED.format(timeout=timeout),
+            "WARN"
+        )
 
         if shot:
             self.notifier.send_photo(shot, "双因素认证页面")
@@ -132,33 +236,39 @@ class GitHubAuthenticator:
             time.sleep(1)
 
             url = page.url
-            if "github.com/sessions/two-factor/" not in url:
-                self._log("双因素认证通过！", "SUCCESS")
+            if GitHubUrls.TWO_FACTOR not in url:
+                logger.info("✅ 双因素认证通过！")
                 self.notifier.notify("✅ <b>双因素认证通过</b>", "SUCCESS")
                 return True
 
-            if "github.com/login" in url:
-                self._log("被重定向到登录页", "ERROR")
+            if GitHubUrls.LOGIN in url:
+                logger.error("❌ 被重定向到登录页")
                 return False
 
             if i % 10 == 0 and i != 0:
-                self._log(f"  等待... ({i}/{timeout}秒)", "INFO")
+                logger.info(f"  等待... ({i}/{timeout}秒)")
 
-        self._log("双因素认证超时", "ERROR")
+        logger.error("❌ 双因素认证超时")
         self.notifier.notify("❌ <b>双因素认证超时</b>", "ERROR")
         return False
 
-    def _handle_2fa_totp(self, page, timeout: int) -> bool:
-        """处理 TOTP 验证码"""
-        self._log("需要输入验证码", "WARN")
+    def _handle_2fa_totp(self, page: Page, timeout: int) -> bool:
+        """处理 TOTP 验证码
+        
+        Args:
+            page: Page 对象
+            timeout: 超时时间（秒）
+            
+        Returns:
+            是否成功
+        """
+        logger.warning("🔐 需要输入验证码")
         shot = self._screenshot(page, "2fa_totp")
 
-        self.notifier.notify(f"""🔐 <b>需要验证码</b>
-
-请在 Telegram 发送：
-<code>/code 你的6位验证码</code>
-
-等待时间：{timeout} 秒""", "WARN")
+        self.notifier.notify(
+            Messages.TWO_FACTOR_TOTP_NEEDED.format(timeout=timeout),
+            "WARN"
+        )
 
         if shot:
             self.notifier.send_photo(shot, "验证码输入页面")
@@ -170,63 +280,74 @@ class GitHubAuthenticator:
         )
 
         if not code:
-            self._log("等待验证码超时", "ERROR")
+            logger.error("❌ 等待验证码超时")
             self.notifier.notify("❌ <b>等待验证码超时</b>", "ERROR")
             return False
 
-        self._log("收到验证码，正在填入...", "SUCCESS")
+        logger.info("✅ 收到验证码，正在填入...")
         self.notifier.notify("✅ 收到验证码，正在填入...", "SUCCESS")
 
-        selectors = [
-            'input[autocomplete="one-time-code"]',
-            'input[name="app_otp"]',
-            'input[name="otp"]'
-        ]
+        return self._fill_totp_code(page, code)
 
-        for sel in selectors:
+    def _fill_totp_code(self, page: Page, code: str) -> bool:
+        """填写 TOTP 验证码
+        
+        Args:
+            page: Page 对象
+            code: 验证码
+            
+        Returns:
+            是否成功
+        """
+        for sel in Selectors.TOTP_INPUT:
             try:
                 el = page.locator(sel).first
                 if el.is_visible(timeout=2000):
                     el.fill(code)
-                    self._log("已填入验证码", "SUCCESS")
+                    logger.info("✅ 已填入验证码")
                     time.sleep(1)
 
                     # 提交
                     try:
                         btn = page.locator('button[type="submit"]').first
                         btn.click()
-                    except Exception:
+                    except (PlaywrightTimeout, PlaywrightError):
                         page.keyboard.press("Enter")
 
                     time.sleep(3)
-                    page.wait_for_load_state('networkidle', timeout=30000)
+                    self._wait_for_page_load(page)
 
-                    if "github.com/sessions/two-factor/" not in page.url:
-                        self._log("验证码验证通过！", "SUCCESS")
+                    if GitHubUrls.TWO_FACTOR not in page.url:
+                        logger.info("✅ 验证码验证通过！")
                         self.notifier.notify("✅ <b>验证码验证通过</b>", "SUCCESS")
                         return True
                     else:
-                        self._log("验证码可能错误", "ERROR")
+                        logger.error("❌ 验证码可能错误")
                         self.notifier.notify("❌ <b>验证码错误</b>", "ERROR")
                         return False
-            except Exception:
-                pass
+            except (PlaywrightTimeout, PlaywrightError):
+                continue
 
-        self._log("未找到验证码输入框", "ERROR")
+        logger.error("❌ 未找到验证码输入框")
         return False
 
-    def _log(self, msg: str, level: str = "INFO"):
-        """记录日志"""
-        icons = {"INFO": "ℹ️", "SUCCESS": "✅", "ERROR": "❌", "WARN": "⚠️", "STEP": "🔹"}
-        print(f"{icons.get(level, '•')} {msg}")
-
-    def _screenshot(self, page, name: str) -> Optional[str]:
-        """截图"""
+    def _screenshot(self, page: Page, name: str) -> Optional[str]:
+        """截图
+        
+        Args:
+            page: Page 对象
+            name: 截图名称
+            
+        Returns:
+            截图文件路径，失败返回 None
+        """
         try:
             n = len(self.screenshots) + 1
             filename = f"{n:02d}_{name}.png"
             page.screenshot(path=filename)
             self.screenshots.append(filename)
+            logger.debug(f"截图保存: {filename}")
             return filename
-        except Exception:
+        except (PlaywrightTimeout, PlaywrightError) as e:
+            logger.warning(f"截图失败: {e}")
             return None
