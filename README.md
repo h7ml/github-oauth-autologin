@@ -128,7 +128,7 @@ jobs:
       # 第一步：使用本 Action 登录 GitHub
       - name: 登录 GitHub
         id: gh-login
-        uses: h7ml/github-oauth-autologin@v1
+        uses: h7ml/github-oauth-autologin@v2
         with:
           username: ${{ secrets.GH_USERNAME }}
           password: ${{ secrets.GH_PASSWORD }}
