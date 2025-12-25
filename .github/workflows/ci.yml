@@ -144,10 +144,28 @@ jobs:
 
       - name: 安装 Playwright 浏览器
         run: |
-          # Ubuntu 24.04 兼容性修复：libasound2 已更名为 libasound2t64
+          # Ubuntu 24.04 兼容性修复：分离浏览器安装和依赖安装
+          # 1. 先安装浏览器（不带 --with-deps 避免 libasound2 问题）
+          playwright install chromium
+          # 2. 手动安装 Chromium 运行时依赖（Ubuntu 24.04 兼容包名）
           sudo apt-get update
-          sudo apt-get install -y libasound2t64 || sudo apt-get install -y libasound2
-          playwright install chromium --with-deps
+          sudo apt-get install -y \
+            libasound2t64 \
+            libatk1.0-0t64 \
+            libatk-bridge2.0-0t64 \
+            libcups2t64 \
+            libdrm2 \
+            libgbm1 \
+            libgtk-3-0t64 \
+            libnspr4 \
+            libnss3 \
+            libpango-1.0-0 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxfixes3 \
+            libxkbcommon0 \
+            libxrandr2 \
+            xvfb
 
       - name: 验证配置文件
         run: |
@@ -243,10 +261,28 @@ jobs:
 
       - name: 安装 Playwright 浏览器
         run: |
-          # Ubuntu 24.04 兼容性修复：libasound2 已更名为 libasound2t64
+          # Ubuntu 24.04 兼容性修复：分离浏览器安装和依赖安装
+          # 1. 先安装浏览器（不带 --with-deps 避免 libasound2 问题）
+          playwright install chromium
+          # 2. 手动安装 Chromium 运行时依赖（Ubuntu 24.04 兼容包名）
           sudo apt-get update
-          sudo apt-get install -y libasound2t64 || sudo apt-get install -y libasound2
-          playwright install chromium --with-deps
+          sudo apt-get install -y \
+            libasound2t64 \
+            libatk1.0-0t64 \
+            libatk-bridge2.0-0t64 \
+            libcups2t64 \
+            libdrm2 \
+            libgbm1 \
+            libgtk-3-0t64 \
+            libnspr4 \
+            libnss3 \
+            libpango-1.0-0 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxfixes3 \
+            libxkbcommon0 \
+            libxrandr2 \
+            xvfb
 
       - name: 模拟运行（验证导入）
         run: |
